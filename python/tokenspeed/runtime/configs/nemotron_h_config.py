@@ -28,9 +28,6 @@ adapted to TokenSpeed's existing hybrid-linear-attention allocator.
 
 from __future__ import annotations
 
-import copy
-from typing import Any
-
 import numpy as np
 import torch
 from transformers.configuration_utils import PretrainedConfig
@@ -46,7 +43,6 @@ ATTENTION = "*"
 MLP = "-"
 MOE = "E"
 DEFAULT_LAYERS_BLOCK_TYPE = ["mamba", "moe", "attention", "moe"]
-DEFAULT_MTP_LAYERS_BLOCK_TYPE = ["attention", "moe"]
 DEFAULT_MAMBA_CHUNK_SIZE = 256
 
 
@@ -91,17 +87,6 @@ class NemotronHConfig(PretrainedConfig):
         if pattern is not None:
             return NemotronHConfig._pattern_to_list(pattern)
         return DEFAULT_LAYERS_BLOCK_TYPE
-
-    @staticmethod
-    def _resolve_mtp_layers_block_type(mtp_layers_block_type, kwargs) -> list[str]:
-        if "mtp_hybrid_override_pattern" in kwargs:
-            pattern = kwargs.pop("mtp_hybrid_override_pattern")
-            if mtp_layers_block_type is None or mtp_layers_block_type == [
-                "attention",
-                "moe",
-            ]:
-                mtp_layers_block_type = NemotronHConfig._pattern_to_list(pattern)
-        return mtp_layers_block_type
 
     @staticmethod
     def _resolve_mamba_chunk_size(mamba_chunk_size, kwargs) -> int:
@@ -178,16 +163,11 @@ class NemotronHConfig(PretrainedConfig):
         n_group=1,
         topk_group=1,
         norm_topk_prob=True,
-        num_nextn_predict_layers=0,
-        mtp_layers_block_type=DEFAULT_MTP_LAYERS_BLOCK_TYPE,
         **kwargs,
     ):
         mamba_chunk_size = self._resolve_mamba_chunk_size(mamba_chunk_size, kwargs)
         layers_block_type = self._resolve_layers_block_type(
             layers_block_type, hybrid_override_pattern, kwargs
-        )
-        mtp_layers_block_type = self._resolve_mtp_layers_block_type(
-            mtp_layers_block_type, kwargs
         )
         if (
             num_hidden_layers is not None
@@ -256,18 +236,6 @@ class NemotronHConfig(PretrainedConfig):
         self.n_group = n_group
         self.topk_group = topk_group
         self.norm_topk_prob = norm_topk_prob
-
-        self.num_nextn_predict_layers = num_nextn_predict_layers
-        if self.num_nextn_predict_layers > 0:
-            if mtp_layers_block_type is None:
-                raise ValueError(
-                    "mtp_layers_block_type is required when "
-                    "num_nextn_predict_layers > 0."
-                )
-            self._validate_layers_block_type(
-                mtp_layers_block_type, None, "mtp_layers_block_type"
-            )
-        self.mtp_layers_block_type = mtp_layers_block_type
 
         super().__init__(
             pad_token_id=pad_token_id,
@@ -347,14 +315,6 @@ class NemotronHConfig(PretrainedConfig):
     def hybrid_override_pattern(self, value):
         self.layers_block_type = self._pattern_to_list(value)
 
-    @property
-    def mtp_hybrid_override_pattern(self) -> str:
-        return self._list_to_pattern(self.mtp_layers_block_type)
-
-    @mtp_hybrid_override_pattern.setter
-    def mtp_hybrid_override_pattern(self, value):
-        self.mtp_layers_block_type = self._pattern_to_list(value)
-
     @staticmethod
     def _list_to_pattern(layers_list: list[str]) -> str:
         reverse_mapping = {
@@ -383,49 +343,3 @@ class NemotronHConfig(PretrainedConfig):
 
     def get_nemotron_h_config_for_layer(self, layer_idx: int) -> "NemotronHConfig":
         return self
-
-    def get_mtp_config(self) -> "NemotronHConfig":
-        return self
-
-    @property
-    def max_n_routed_experts(self) -> int:
-        return self.n_routed_experts
-
-
-class NemotronHPuzzleConfig(NemotronHConfig):
-    model_type = "nemotron_h_puzzle"
-    has_no_defaults_at_init = True
-
-    def __init__(
-        self,
-        *,
-        block_configs: list[dict[str, Any]],
-        mtp_block_configs: list[dict[str, Any]] | None = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.block_configs = block_configs
-        self.mtp_block_configs = mtp_block_configs
-
-    def get_nemotron_h_config_for_layer(self, layer_idx: int) -> NemotronHConfig:
-        layer_config = copy.copy(self)
-        for key, value in self.block_configs[layer_idx].items():
-            setattr(layer_config, key, value)
-        return layer_config
-
-    def get_mtp_config(self) -> NemotronHConfig:
-        assert self.mtp_block_configs
-        mtp_config = copy.copy(self)
-        mtp_config.block_configs = self.mtp_block_configs
-        return mtp_config
-
-    @property
-    def max_n_routed_experts(self) -> int:
-        block_n_routed_experts = [
-            block["n_routed_experts"]
-            for block in self.block_configs
-            if block["block_type"] == "moe"
-        ]
-        max_experts = max(block_n_routed_experts)
-        assert max_experts > 0
-        return max_experts

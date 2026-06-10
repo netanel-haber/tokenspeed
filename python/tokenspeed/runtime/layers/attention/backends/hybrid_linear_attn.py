@@ -598,11 +598,6 @@ class MambaAttnBackend(AttentionBackend):
                         track_mask,
                     )
 
-        draft_token_num = int(
-            kwargs.get("tokens_per_req", self.speculative_num_draft_tokens)
-            if is_target_verify or is_draft_extend
-            else 1
-        )
         mamba2_metadata = self._build_mamba2_metadata(
             query_start_loc=query_start_loc,
             mamba_cache_indices=mamba_cache_indices,
@@ -611,9 +606,6 @@ class MambaAttnBackend(AttentionBackend):
             num_prefills=num_prefills,
             extend_prefix_lens=kwargs.get("extend_prefix_lens"),
             extend_seq_lens_cpu=extend_seq_lens_cpu,
-            mamba_output_indices=mamba_output_indices,
-            is_target_verify=is_target_verify,
-            draft_token_num=draft_token_num,
             chunk_size=mamba_cache_chunk_size,
             track_conv_indices=track_conv_indices,
             track_ssm_h_src=track_ssm_h_src,
@@ -697,9 +689,6 @@ class MambaAttnBackend(AttentionBackend):
         num_prefills: int,
         extend_prefix_lens: torch.Tensor | None,
         extend_seq_lens_cpu: torch.Tensor | None,
-        mamba_output_indices: torch.Tensor | None,
-        is_target_verify: bool,
-        draft_token_num: int,
         chunk_size: int,
         track_conv_indices: torch.Tensor | None = None,
         track_ssm_h_src: torch.Tensor | None = None,
@@ -714,13 +703,6 @@ class MambaAttnBackend(AttentionBackend):
                 num_prefills=0,
                 num_prefill_tokens=0,
                 num_decodes=bs,
-                is_target_verify=is_target_verify,
-                draft_token_num=draft_token_num,
-                mamba_output_indices=(
-                    mamba_output_indices[:bs]
-                    if mamba_output_indices is not None
-                    else None
-                ),
             )
 
         if not forward_mode.is_extend_or_mixed():
@@ -754,8 +736,6 @@ class MambaAttnBackend(AttentionBackend):
             num_prefills=num_prefills,
             num_prefill_tokens=num_prefill_tokens,
             num_decodes=num_decodes,
-            is_target_verify=False,
-            draft_token_num=1,
             track_conv_indices=track_conv_indices,
             track_ssm_h_src=track_ssm_h_src,
             track_ssm_h_dst=track_ssm_h_dst,
@@ -870,11 +850,6 @@ class MambaAttnBackend(AttentionBackend):
             padded_mamba_indices.copy_(mamba_input_indices)
         self._qsl_dirty[bs - 1] = False
         self._qsl_last_mode[bs - 1] = (forward_mode, self.spec_num_tokens > 1)
-        draft_token_num = (
-            self.speculative_num_draft_tokens
-            if is_target_verify or is_draft_extend
-            else 1
-        )
         mamba2_metadata = self._build_mamba2_metadata(
             query_start_loc=self.query_start_loc_list[bs - 1],
             mamba_cache_indices=self.state_indices_list[bs - 1],
@@ -883,9 +858,6 @@ class MambaAttnBackend(AttentionBackend):
             num_prefills=0,
             extend_prefix_lens=None,
             extend_seq_lens_cpu=None,
-            mamba_output_indices=mamba_output_indices,
-            is_target_verify=is_target_verify,
-            draft_token_num=draft_token_num,
             chunk_size=int(
                 kwargs.get("mamba_cache_chunk_size", self.mamba_cache_chunk_size)
                 or self.mamba_cache_chunk_size
@@ -993,11 +965,6 @@ class MambaAttnBackend(AttentionBackend):
             self._qsl_dirty[bs - 1] = True
             self._qsl_last_mode[bs - 1] = (forward_mode, self.spec_num_tokens > 1)
 
-        draft_token_num = (
-            self.speculative_num_draft_tokens
-            if is_target_verify or is_draft_extend
-            else 1
-        )
         mamba2_metadata = self._build_mamba2_metadata(
             query_start_loc=self.query_start_loc_list[bs - 1],
             mamba_cache_indices=self.state_indices_list[bs - 1],
@@ -1006,9 +973,6 @@ class MambaAttnBackend(AttentionBackend):
             num_prefills=0,
             extend_prefix_lens=None,
             extend_seq_lens_cpu=None,
-            mamba_output_indices=mamba_output_indices,
-            is_target_verify=is_target_verify,
-            draft_token_num=draft_token_num,
             chunk_size=int(
                 kwargs.get("mamba_cache_chunk_size", self.mamba_cache_chunk_size)
                 or self.mamba_cache_chunk_size

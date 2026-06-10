@@ -717,8 +717,6 @@ class NemotronHForCausalLM(BaseCausalLM):
             name = self._remap_weight_name(name)
             if any(pattern in name for pattern in skip_patterns):
                 continue
-            if "mtp" in name:
-                continue
 
             layer_id = get_layer_id(name)
             if layer_id is not None and layer_id >= self.config.num_hidden_layers:
@@ -763,8 +761,4 @@ class NemotronHForCausalLM(BaseCausalLM):
         torch.cuda.synchronize()
 
 
-class NemotronHPuzzleForCausalLM(NemotronHForCausalLM):
-    pass
-
-
-EntryClass = [NemotronHForCausalLM, NemotronHPuzzleForCausalLM]
+EntryClass = [NemotronHForCausalLM]

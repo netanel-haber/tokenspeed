@@ -130,7 +130,6 @@ nvfp4_block_scale_interleave = error_fn
 trtllm_bf16_moe = error_fn
 trtllm_fp4_block_scale_moe = error_fn
 trtllm_fp4_block_scale_moe_raw = error_fn
-trtllm_fp4_block_scale_routed_moe = error_fn
 autotune = None
 scaled_fp4_grouped_quantize = error_fn
 silu_and_mul_scaled_nvfp4_experts_quantize = error_fn
@@ -150,7 +149,6 @@ if platform.is_nvidia:
             nvfp4_block_scale_interleave,
             trtllm_bf16_moe,
             trtllm_fp4_block_scale_moe,
-            trtllm_fp4_block_scale_routed_moe,
         )
 
         trtllm_fp4_block_scale_moe_raw = trtllm_fp4_block_scale_moe

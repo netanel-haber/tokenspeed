@@ -92,7 +92,6 @@ def register_backend(
 
 _HYBRID_GDN_ARCHITECTURES = {
     "NemotronHForCausalLM",
-    "NemotronHPuzzleForCausalLM",
     "Qwen3_5MoeForConditionalGeneration",
     "Qwen3_5MoeForConditionalGenerationNextN",
     "Qwen3_5ForConditionalGeneration",

@@ -48,7 +48,6 @@ from tokenspeed.runtime.configs import (
     KimiK25Config,
     MiniMaxM2Config,
     NemotronHConfig,
-    NemotronHPuzzleConfig,
     Qwen2Config,
     Qwen3_5Config,
     Qwen3_5MoeConfig,
@@ -68,7 +67,6 @@ _CONFIG_REGISTRY: dict[str, type[PretrainedConfig]] = {
     KimiK2Config.model_type: KimiK2Config,
     KimiK25Config.model_type: KimiK25Config,
     NemotronHConfig.model_type: NemotronHConfig,
-    NemotronHPuzzleConfig.model_type: NemotronHPuzzleConfig,
 }
 
 _DEEPSEEK_V4_ENCODING_MODULE_NAME = "_tokenspeed_deepseek_v4_encoding"
